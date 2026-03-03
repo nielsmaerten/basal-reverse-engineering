@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.git.backup/
+
+# Large reference repos (submodules or local clones)
+AndroidAPS/
+cgm-remote-monitor/
+aaps screenshot.png
