@@ -29,7 +29,12 @@ CLI, generating matplotlib visualizations, and spotting patterns. You operate in
 
 Use the project CLI to fetch therapy day data. Always activate the venv first.
 
-### Single day (defaults to today)
+**Incomplete day warning:** The CLI defaults to yesterday (the last complete day).
+If the user asks for "today", use `--date <today's date>` but warn them that the
+data is incomplete and daily metrics (TDD, TIR, basal/bolus ratio) will be partial.
+Never draw conclusions about daily totals from an incomplete day.
+
+### Single day (defaults to yesterday)
 ```bash
 cd /home/niels/src/diabeetus/basal-reverse-engineering
 source .venv/bin/activate && python cli.py --format json

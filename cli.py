@@ -7,7 +7,7 @@ Usage:
   python cli.py --start 2026-02-25 --end 2026-02-27
   python cli.py --start 2026-02-25 -n 3
   python cli.py --end 2026-02-27 -n 3
-  python cli.py                          # today
+  python cli.py                          # yesterday
   python cli.py --format json
   python cli.py --format markdown
   python cli.py --format debug
@@ -36,7 +36,7 @@ from formatters import FORMATTERS
 
 def resolve_dates(args) -> list[str]:
     """Resolve CLI date arguments into a list of YYYY-MM-DD strings."""
-    today = date.today().isoformat()
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
 
     if args.date:
         return [args.date]
@@ -73,7 +73,7 @@ def resolve_dates(args) -> list[str]:
     if end:
         return [end]
 
-    return [today]
+    return [yesterday]
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Fetch therapy day data from Nightscout API",
         epilog="Date selection: use --date for a single day, or combine "
-               "--start/--end/-n for ranges. Defaults to today.",
+               "--start/--end/-n for ranges. Defaults to yesterday.",
     )
 
     # Date selection (all optional)
