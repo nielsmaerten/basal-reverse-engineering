@@ -1,8 +1,10 @@
-# Nightscout Data Analysis with Claude
+# Nightflux 3 🎉
 
 An AI-powered tool for understanding your Nightscout diabetes data. It connects to
 your Nightscout instance, fetches CGM, insulin, and carb data, and presents
 interactive visual reports — the kind you'd bring to an endo appointment.
+
+[![Watch the demo](https://img.youtube.com/vi/pJwGmjV5dok/maxresdefault.jpg)](https://youtu.be/pJwGmjV5dok)
 
 Built for [AAPS (AndroidAPS)](https://github.com/nightscout/AndroidAPS) users with a
 [Nightscout](https://nightscout.github.io/) instance, but works with any Nightscout
