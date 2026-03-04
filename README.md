@@ -1,15 +1,44 @@
-# Nightscout Therapy Day CLI
+# Nightscout Data Analysis with Claude
 
-Fetches daily therapy data (insulin, carbs, CGM, temp targets, events) from a
-Nightscout instance via its REST API and displays it in various formats. Designed
-for use with AAPS (AndroidAPS) and the Nightscout v1 API.
+An AI-powered tool for understanding your Nightscout diabetes data. It connects to
+your Nightscout instance, fetches CGM, insulin, and carb data, and presents
+interactive visual reports — the kind you'd bring to an endo appointment.
+
+Built for [AAPS (AndroidAPS)](https://github.com/nightscout/AndroidAPS) users with a
+[Nightscout](https://nightscout.github.io/) instance, but works with any Nightscout
+setup that exposes the v1 REST API.
+
+## What it does
+
+You talk to Claude in natural language. Ask it to analyze your data and it builds a
+live slidedeck in your browser with interactive charts, stat cards, and written
+observations — all while you watch it come together in real time.
+
+A default "help me understand my data" prompt produces a 30-day report with:
+
+- Headline stats (TIR, GMI, CV, lows)
+- Daily time-in-range breakdown
+- AGP (Ambulatory Glucose Profile) overlay
+- TDD and basal/bolus trends
+- Carb intake patterns
+- Glucose variability analysis
+- Weekly comparisons and notable days
+- Summary with key patterns
+
+You can also ask specific questions ("show me overnight patterns this week",
+"compare weekdays vs weekends", "what does my morning rise look like?") and Claude
+will tailor the analysis.
 
 ## Prerequisites
 
 - Python 3.11+
-- A Nightscout instance with API access enabled
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
+- A Nightscout instance with API access
+- tmux (for browser-based terminal access)
 
 ## Setup
+
+### 1. Clone and install dependencies
 
 ```bash
 git clone <repo-url> && cd basal-reverse-engineering
@@ -18,7 +47,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file (or export the variables):
+### 2. Configure your Nightscout connection
+
+Create a `.env` file in the project root:
 
 ```
 NS_API_URL=https://your-nightscout.example.com
@@ -26,68 +57,105 @@ NS_API_SECRET=your-api-secret
 TIMEZONE=Europe/Amsterdam
 ```
 
-## Usage
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NS_API_URL` | yes | Your Nightscout base URL |
+| `NS_API_SECRET` | yes | API secret (plain text — hashed automatically) |
+| `TIMEZONE` | no | Timezone for day boundaries (default: `Europe/Amsterdam`) |
+
+### 3. Start a tmux session
+
+The slidedeck includes a web-based terminal so you can interact with Claude from the
+browser. This requires a tmux session:
 
 ```bash
-# Today's summary
+tmux new-session -s claude
+```
+
+### 4. Launch Claude Code
+
+Inside the tmux session:
+
+```bash
+claude
+```
+
+Claude automatically picks up the MCP server config (`.mcp.json`) and the Nightscout
+skill. No extra configuration needed.
+
+### 5. Start talking
+
+```
+> Help me understand my diabetes data
+```
+
+Claude will open a slidedeck in your browser at `http://localhost:8765`, fetch your
+last 30 days of data, and start building slides. You can watch the presentation come
+together in real time, and use the built-in terminal panel in the browser to continue
+the conversation.
+
+## Browser interface
+
+The slidedeck opens at `http://localhost:8765` and includes:
+
+- **Slide panel** — interactive Plotly charts, stat cards, and markdown commentary
+- **Terminal panel** — a live terminal connected to your Claude session (toggle with
+  the terminal button in the top bar)
+- **Slide navigation** — sidebar thumbnails, arrow keys, or the bottom nav bar
+
+The terminal panel supports mouse-wheel scrolling and has scroll buttons in the header
+for paging through output.
+
+## CLI reference
+
+The underlying CLI can also be used directly for quick lookups:
+
+```bash
+source .venv/bin/activate
+
+# Yesterday's summary (default)
 python cli.py
 
 # Specific date
-python cli.py --date 2026-02-27
+python cli.py --date 2026-03-01
 
 # Date range
-python cli.py --start 2026-02-25 --end 2026-02-27
+python cli.py --start 2026-02-01 --end 2026-03-01
 
-# Last 7 days ending today
-python cli.py --end $(date +%Y-%m-%d) -n 7
+# Last 14 days
+python cli.py --end 2026-03-01 -n 14
 
-# 3 days starting from a date
-python cli.py --start 2026-02-25 -n 3
-
-# Different output formats
-python cli.py --format markdown
+# Output formats: summary (default), markdown, json, debug
 python cli.py --format json
-python cli.py --format debug
 ```
 
-## Output Formats
+## Project structure
 
-**summary** (default) — compact text block per day:
 ```
-============================================================
-  2026-02-27  (Europe/Amsterdam)
-============================================================
-  TDD:    58.3 U
-  Bolus:  28.1 U  (48%)
-  Basal:  30.2 U  (52%)
-  Carbs:   145 g
-  CGM:    288 readings  avg 132  range 72-245 mg/dl
-  Boluses: 42  Basal slots: 87  Events: 2
-```
-
-**markdown** — summary table + per-day detail tables (boluses, carbs, temp targets, events)
-
-**json** — full day data as JSON (single object for one day, array for multiple)
-
-**debug** — verbose per-slot / per-bolus output for troubleshooting
-
-## Legacy: TDD Comparison
-
-`insulin_totals.py` is a standalone script that compares TDD calculations across
-multiple sources (AAPS SQLite database, Nightscout MongoDB, Nightscout REST API).
-It requires additional dependencies (`pymongo`) and access to the AAPS database.
-
-```bash
-python insulin_totals.py --date 2026-02-24
-python insulin_totals.py --date 2026-02-24 --ns-only
+.
+├── cli.py                 # CLI for fetching therapy data
+├── nightscout.py          # Nightscout REST API client
+├── models.py              # Data models (CGM, insulin, carbs, etc.)
+├── formatters.py          # Output formatters (summary, markdown, json)
+├── slidedeck/             # MCP server for browser-based presentations
+│   ├── server.py          #   FastMCP server + slidedeck tools
+│   ├── web.py             #   HTTP/WebSocket server
+│   ├── terminal.py        #   PTY-to-WebSocket bridge (tmux)
+│   ├── state.py           #   Slide state management
+│   └── client.html        #   Browser frontend
+├── .claude/skills/        # Claude Code skill definitions
+│   ├── nightscout/        #   Data analysis + visualization skill
+│   └── slidedeck/         #   Presentation building skill
+├── .mcp.json              # MCP server configuration
+├── .env                   # Nightscout credentials (create this)
+└── requirements.txt       # Python dependencies
 ```
 
-## Environment Variables
+## Safety
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NS_API_URL` | yes | — | Nightscout base URL |
-| `NS_API_SECRET` | yes | — | Nightscout API secret (plain text, hashed automatically) |
-| `TIMEZONE` | no | `Europe/Amsterdam` | Timezone for day boundaries |
-| `NS_MONGO_URI` | no | — | MongoDB URI (legacy `insulin_totals.py` only) |
-| `AAPS_DB_PATH` | no | — | Path to AAPS SQLite DB (legacy `insulin_totals.py` only) |
+This tool operates in **observe-and-report** mode. Claude describes patterns and
+generates visualizations but does not proactively suggest therapy changes. If you
+explicitly ask for suggestions, Claude will provide analytical observations with a
+reminder to discuss any changes with your healthcare provider.
+
+This is not a medical device and is not a substitute for professional medical advice.
