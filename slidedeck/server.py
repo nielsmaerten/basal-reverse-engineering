@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 import webbrowser
@@ -13,7 +14,8 @@ from dataclasses import asdict
 from fastmcp import FastMCP
 
 from .state import DeckState, Slide
-from .web import broadcast, set_deck, start_server, stop_server
+from .terminal import TerminalManager
+from .web import broadcast, set_deck, set_terminal, start_server, stop_server
 
 logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
 logger = logging.getLogger("slidedeck")
@@ -27,10 +29,13 @@ async def lifespan(mcp: FastMCP) -> AsyncIterator[dict]:
     """Start/stop the web server alongside the MCP server."""
     deck = DeckState.load()
     set_deck(deck)
+    terminal = TerminalManager(session=os.environ.get("SLIDEDECK_TMUX_SESSION", "claude"))
+    set_terminal(terminal)
     runner, site = await start_server(HOST, PORT)
     try:
-        yield {"deck": deck}
+        yield {"deck": deck, "terminal": terminal}
     finally:
+        await terminal.stop()
         await stop_server(runner)
 
 

@@ -6,6 +6,9 @@
 <title>Slidedeck</title>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
 <style>
   :root {
     --bg-primary: #0f1117;
@@ -650,6 +653,64 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ── Terminal panel ── */
+  .terminal-panel {
+    width: 50%;
+    flex-shrink: 0;
+    background: #0d0d0d;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    overflow: hidden;
+  }
+
+  .terminal-panel.collapsed {
+    width: 0;
+    border-left: none;
+  }
+
+  .terminal-header {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+  }
+
+  .terminal-header-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .terminal-header-dot.connected { background: var(--green); }
+  .terminal-header-dot.disconnected { background: var(--red); }
+  .terminal-header-dot.connecting { background: var(--yellow); animation: pulse 0.8s ease-in-out infinite; }
+
+  .terminal-header-label {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+  }
+
+  .terminal-body {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .terminal-body .xterm-viewport { background-color: #0d0d0d !important; }
+
+  .btn-icon.terminal-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
 </style>
 </head>
 <body>
@@ -670,6 +731,11 @@
     <span id="connLabel">Connecting...</span>
   </div>
   <div class="topbar-actions">
+    <button class="btn-icon" id="btnTerminal" onclick="toggleTerminal()" title="Toggle terminal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+      </svg>
+    </button>
     <button class="btn-icon" onclick="toggleTheme()" title="Toggle dark/light mode">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -697,6 +763,13 @@
   </div>
   <div class="content">
     <div class="slide-viewport" id="viewport"></div>
+  </div>
+  <div class="terminal-panel collapsed" id="terminalPanel">
+    <div class="terminal-header">
+      <div class="terminal-header-dot" id="termDot"></div>
+      <span class="terminal-header-label" id="termLabel">Terminal</span>
+    </div>
+    <div class="terminal-body" id="termBody"></div>
   </div>
 </div>
 
@@ -1015,8 +1088,9 @@ function goToSlide(id) {
   sendMessage('slide:viewed', { id });
 }
 
-// Keyboard navigation
+// Keyboard navigation (skip when terminal is focused)
 document.addEventListener('keydown', (e) => {
+  if (terminalFocused) return;
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); navigate(-1); }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); navigate(1); }
 });
@@ -1046,6 +1120,170 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ── Terminal ──
+let termWs = null;
+let terminalVisible = false;
+let term = null;
+let fitAddon = null;
+let terminalFocused = false;
+let termReconnectDelay = 500;
+const TERM_MAX_RECONNECT_DELAY = 10000;
+
+function toggleTerminal() {
+  const panel = document.getElementById('terminalPanel');
+  const btn = document.getElementById('btnTerminal');
+  terminalVisible = !terminalVisible;
+
+  if (terminalVisible) {
+    panel.classList.remove('collapsed');
+    btn.classList.add('terminal-active');
+    initTerminal();
+    connectTerminal();
+    // Fit after CSS transition completes
+    setTimeout(() => { if (fitAddon) fitAddon.fit(); }, 350);
+  } else {
+    panel.classList.add('collapsed');
+    btn.classList.remove('terminal-active');
+    disconnectTerminal();
+  }
+}
+
+function initTerminal() {
+  if (term) return;
+  term = new Terminal({
+    cursorBlink: true,
+    fontSize: 13,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
+    theme: {
+      background: '#0d0d0d',
+      foreground: '#e8eaed',
+      cursor: '#6c9eff',
+      selectionBackground: 'rgba(108, 158, 255, 0.3)',
+      black: '#1a1d27',
+      red: '#ea4335',
+      green: '#34a853',
+      yellow: '#fbbc04',
+      blue: '#6c9eff',
+      magenta: '#c678dd',
+      cyan: '#56b6c2',
+      white: '#e8eaed',
+      brightBlack: '#5f6368',
+      brightRed: '#ea4335',
+      brightGreen: '#34a853',
+      brightYellow: '#fbbc04',
+      brightBlue: '#6c9eff',
+      brightMagenta: '#c678dd',
+      brightCyan: '#56b6c2',
+      brightWhite: '#ffffff',
+    },
+  });
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(document.getElementById('termBody'));
+  fitAddon.fit();
+
+  // Send keystrokes to WS as binary
+  term.onData((data) => {
+    if (termWs && termWs.readyState === WebSocket.OPEN) {
+      termWs.send(new TextEncoder().encode(data));
+    }
+  });
+
+  // Send resize events
+  term.onResize(({ cols, rows }) => {
+    if (termWs && termWs.readyState === WebSocket.OPEN) {
+      termWs.send(JSON.stringify({ type: 'resize', cols, rows }));
+    }
+  });
+
+  // Focus tracking
+  const body = document.getElementById('termBody');
+  body.addEventListener('focusin', () => { terminalFocused = true; }, true);
+  body.addEventListener('focusout', () => { terminalFocused = false; }, true);
+}
+
+function connectTerminal() {
+  if (termWs && (termWs.readyState === WebSocket.OPEN || termWs.readyState === WebSocket.CONNECTING)) return;
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  termWs = new WebSocket(`${proto}//${location.host}/terminal/ws`);
+  termWs.binaryType = 'arraybuffer';
+
+  setTermStatus('connecting', 'Connecting...');
+
+  termWs.onopen = () => {
+    termReconnectDelay = 500;
+    setTermStatus('connected', 'Connected');
+    // Send initial size
+    if (fitAddon) {
+      fitAddon.fit();
+      const dims = fitAddon.proposeDimensions();
+      if (dims) {
+        termWs.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+      }
+    }
+  };
+
+  termWs.onmessage = (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      term.write(new Uint8Array(event.data));
+    } else {
+      // Text message — JSON control
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'error') {
+          setTermStatus('disconnected', msg.message);
+          term.write(`\r\n\x1b[31m${msg.message}\x1b[0m\r\n`);
+        } else if (msg.type === 'session_ended') {
+          setTermStatus('disconnected', 'Session ended');
+          term.write(`\r\n\x1b[33m${msg.message}\x1b[0m\r\n`);
+          // Try reconnect in case session restarts
+          scheduleTermReconnect();
+        }
+      } catch (e) {}
+    }
+  };
+
+  termWs.onclose = () => {
+    setTermStatus('disconnected', 'Disconnected');
+    if (terminalVisible) scheduleTermReconnect();
+  };
+
+  termWs.onerror = () => {
+    termWs.close();
+  };
+}
+
+function disconnectTerminal() {
+  if (termWs) {
+    termWs.onclose = null;  // Prevent reconnect
+    termWs.close();
+    termWs = null;
+  }
+  setTermStatus('', 'Terminal');
+}
+
+function scheduleTermReconnect() {
+  if (!terminalVisible) return;
+  setTermStatus('connecting', 'Reconnecting...');
+  setTimeout(() => {
+    if (terminalVisible) connectTerminal();
+    termReconnectDelay = Math.min(termReconnectDelay * 1.5, TERM_MAX_RECONNECT_DELAY);
+  }, termReconnectDelay);
+}
+
+function setTermStatus(state, label) {
+  const dot = document.getElementById('termDot');
+  const lbl = document.getElementById('termLabel');
+  dot.className = 'terminal-header-dot' + (state ? ' ' + state : '');
+  lbl.textContent = label;
+}
+
+// Refit terminal on window resize
+window.addEventListener('resize', () => {
+  if (terminalVisible && fitAddon) fitAddon.fit();
+});
 
 // ── Init ──
 connect();
