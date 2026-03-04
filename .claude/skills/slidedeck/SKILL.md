@@ -14,6 +14,24 @@ Present data as a live browser-based slidedeck that the user watches while you n
 | `slide_navigate(id)` | Navigate browser to a slide |
 | `slide_clear()` | Remove all slides, keep deck open |
 
+## Tmux Session Warning
+
+When `deck_open()` returns a WARNING about a missing tmux session, you **must stop
+building slides** and inform the user:
+
+1. Explain that the slidedeck has an embedded terminal panel that mirrors the Claude
+   Code session, but it requires running inside tmux to work.
+2. Tell them the deck is open and will work fine for slides and charts, but the
+   built-in terminal panel won't be available in this session.
+3. Offer two options:
+   - **Continue without terminal support** — the presentation works normally, just
+     without the embedded terminal view in the browser.
+   - **Restart in tmux** — exit, run `tmux new -s claude`, then start Claude Code
+     again. The terminal panel will then work.
+4. **Wait for the user's choice** before proceeding with any slides.
+
+Do NOT silently ignore this warning or continue building the presentation.
+
 ## Slide Types
 
 ### `html` — Raw HTML

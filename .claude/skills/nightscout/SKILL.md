@@ -387,7 +387,10 @@ variability_spec = {
 
 1. **Fetch data** with the CLI (same as always)
 2. **Compute metrics** in a Python script — write Plotly JSON to temp files
-3. **`deck_open(title)`** to launch the browser
+3. **`deck_open(title)`** to launch the browser. **If the response contains a
+   WARNING about a missing tmux session**, stop and inform the user — see the
+   slidedeck skill's "Tmux Session Warning" section. Wait for their choice before
+   continuing.
 4. **Add slides progressively** — the user sees them appear in real time
 5. **Use `slide_navigate()`** to direct attention after adding a batch
 6. **Mix slide types** — Plotly for interactive charts, `image` for complex
@@ -418,7 +421,8 @@ When presenting multi-day analysis, a summary table is helpful before diving int
 2. **Fetch data** — run the CLI with appropriate date arguments and `--format json`.
    For the default 30-day report: `python cli.py --end <yesterday> -n 30 --format json`
 3. **Open the slidedeck** (if using it) — `deck_open()` immediately so the browser
-   opens while you compute
+   opens while you compute. **If `deck_open` returns a tmux warning**, stop and
+   follow the slidedeck skill's "Tmux Session Warning" instructions before continuing.
 4. **Process** — parse the JSON, compute derived metrics (TIR, CV, GMI, etc.)
 5. **Build slides progressively** — add slides one at a time so the user sees
    progress in real time. Navigate to the title slide after the first batch.

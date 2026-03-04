@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import subprocess
@@ -69,7 +70,31 @@ async def deck_open(title: str = "Slidedeck") -> str:
         webbrowser.open(url)
     except Exception:
         pass
-    return f"Slidedeck opened at {url} with title '{title}'"
+
+    # Check if the tmux session is available for the embedded terminal
+    tmux_warning = ""
+    tmux_session = os.environ.get("SLIDEDECK_TMUX_SESSION", "claude")
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "tmux", "has-session", "-t", tmux_session,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        rc = await proc.wait()
+        if rc != 0:
+            tmux_warning = (
+                f"\n\nWARNING: tmux session '{tmux_session}' not found. "
+                f"The embedded terminal panel will not work. "
+                f"To enable it, start Claude Code inside tmux: "
+                f"tmux new -s {tmux_session}"
+            )
+    except FileNotFoundError:
+        tmux_warning = (
+            "\n\nWARNING: tmux is not installed. "
+            "The embedded terminal panel will not work."
+        )
+
+    return f"Slidedeck opened at {url} with title '{title}'{tmux_warning}"
 
 
 @mcp.tool()
