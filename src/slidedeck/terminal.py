@@ -46,6 +46,13 @@ class TerminalManager:
         if rc != 0:
             raise RuntimeError(f"tmux session '{self.session}' not found. Start it with: tmux new -s {self.session}")
 
+        # Ensure mouse mode is on so scroll events work in the web terminal
+        await asyncio.create_subprocess_exec(
+            "tmux", "set-option", "-t", self.session, "mouse", "on",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+
         # Fork a PTY and attach to the tmux session
         pid, fd = pty.fork()
         if pid == 0:
