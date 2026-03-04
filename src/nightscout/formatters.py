@@ -5,7 +5,7 @@ from dataclasses import asdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from models import DayData
+from nightscout.models import DayData
 
 
 # ---------------------------------------------------------------------------

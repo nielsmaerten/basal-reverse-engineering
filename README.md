@@ -114,41 +114,50 @@ The underlying CLI can also be used directly for quick lookups:
 source .venv/bin/activate
 
 # Yesterday's summary (default)
-python cli.py
+python -m nightscout
 
 # Specific date
-python cli.py --date 2026-03-01
+python -m nightscout --date 2026-03-01
 
 # Date range
-python cli.py --start 2026-02-01 --end 2026-03-01
+python -m nightscout --start 2026-02-01 --end 2026-03-01
 
 # Last 14 days
-python cli.py --end 2026-03-01 -n 14
+python -m nightscout --end 2026-03-01 -n 14
 
 # Output formats: summary (default), markdown, json, debug
-python cli.py --format json
+python -m nightscout --format json
 ```
 
 ## Project structure
 
 ```
 .
-├── cli.py                 # CLI for fetching therapy data
-├── nightscout.py          # Nightscout REST API client
-├── models.py              # Data models (CGM, insulin, carbs, etc.)
-├── formatters.py          # Output formatters (summary, markdown, json)
-├── slidedeck/             # MCP server for browser-based presentations
-│   ├── server.py          #   FastMCP server + slidedeck tools
-│   ├── web.py             #   HTTP/WebSocket server
-│   ├── terminal.py        #   PTY-to-WebSocket bridge (tmux)
-│   ├── state.py           #   Slide state management
-│   └── client.html        #   Browser frontend
-├── .claude/skills/        # Claude Code skill definitions
-│   ├── nightscout/        #   Data analysis + visualization skill
-│   └── slidedeck/         #   Presentation building skill
-├── .mcp.json              # MCP server configuration
-├── .env                   # Nightscout credentials (create this)
-└── requirements.txt       # Python dependencies
+├── pyproject.toml             # Project metadata + entry points
+├── requirements.txt           # Python dependencies
+├── src/
+│   ├── nightscout/            # Nightscout data library + CLI
+│   │   ├── __init__.py
+│   │   ├── __main__.py        #   CLI entry (python -m nightscout)
+│   │   ├── api.py             #   REST API client
+│   │   ├── models.py          #   Data models (CGM, insulin, carbs, etc.)
+│   │   └── formatters.py      #   Output formatters (summary, markdown, json)
+│   └── slidedeck/             # MCP server for browser-based presentations
+│       ├── __init__.py
+│       ├── __main__.py        #   python -m slidedeck entry
+│       ├── server.py          #   FastMCP server + slidedeck tools
+│       ├── web.py             #   HTTP/WebSocket server
+│       ├── terminal.py        #   PTY-to-WebSocket bridge (tmux)
+│       ├── state.py           #   Slide state management
+│       └── client.html        #   Browser frontend
+├── scripts/
+│   └── insulin_totals.py      # TDD comparison (AAPS vs Nightscout)
+├── .claude/skills/            # Claude Code skill definitions
+│   ├── nightscout/            #   Data analysis + visualization skill
+│   └── slidedeck/             #   Presentation building skill
+├── .mcp.json                  # MCP server configuration
+├── .env                       # Nightscout credentials (create this)
+└── docs/                      # Documentation
 ```
 
 ## Safety

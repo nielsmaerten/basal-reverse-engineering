@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from models import (
+from nightscout.models import (
     CGMEntry, BasalSlot, Bolus, Carbs, TempTarget, ProfileSwitch, Event, DayData,
 )
 

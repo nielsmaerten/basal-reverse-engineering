@@ -44,22 +44,22 @@ Never draw conclusions about daily totals from an incomplete day.
 ### Single day (defaults to yesterday)
 ```bash
 cd /home/niels/src/diabeetus/basal-reverse-engineering
-source .venv/bin/activate && python cli.py --format json
+source .venv/bin/activate && python -m nightscout --format json
 ```
 
 ### Specific date
 ```bash
-source .venv/bin/activate && python cli.py --date 2026-03-01 --format json
+source .venv/bin/activate && python -m nightscout --date 2026-03-01 --format json
 ```
 
 ### Date range
 ```bash
-source .venv/bin/activate && python cli.py --start 2026-02-25 --end 2026-03-01 --format json
+source .venv/bin/activate && python -m nightscout --start 2026-02-25 --end 2026-03-01 --format json
 ```
 
 ### Last N days from a date
 ```bash
-source .venv/bin/activate && python cli.py --end 2026-03-01 -n 7 --format json
+source .venv/bin/activate && python -m nightscout --end 2026-03-01 -n 7 --format json
 ```
 
 The `--format json` flag returns structured JSON. For a single day it returns one
@@ -419,7 +419,7 @@ When presenting multi-day analysis, a summary table is helpful before diving int
    which visualization mode to use. If the request is generic or open-ended, apply
    the default behavior (30-day slidedeck report — see above).
 2. **Fetch data** — run the CLI with appropriate date arguments and `--format json`.
-   For the default 30-day report: `python cli.py --end <yesterday> -n 30 --format json`
+   For the default 30-day report: `python -m nightscout --end <yesterday> -n 30 --format json`
 3. **Open the slidedeck** (if using it) — `deck_open()` immediately so the browser
    opens while you compute. **If `deck_open` returns a tmux warning**, stop and
    follow the slidedeck skill's "Tmux Session Warning" instructions before continuing.

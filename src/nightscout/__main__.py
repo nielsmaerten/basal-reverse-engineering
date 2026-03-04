@@ -3,21 +3,20 @@
 CLI for fetching and displaying therapy day data from Nightscout.
 
 Usage:
-  python cli.py --date 2026-02-27
-  python cli.py --start 2026-02-25 --end 2026-02-27
-  python cli.py --start 2026-02-25 -n 3
-  python cli.py --end 2026-02-27 -n 3
-  python cli.py                          # yesterday
-  python cli.py --format json
-  python cli.py --format markdown
-  python cli.py --format debug
+  python -m nightscout --date 2026-02-27
+  python -m nightscout --start 2026-02-25 --end 2026-02-27
+  python -m nightscout --start 2026-02-25 -n 3
+  python -m nightscout --end 2026-02-27 -n 3
+  python -m nightscout                          # yesterday
+  python -m nightscout --format json
+  python -m nightscout --format markdown
+  python -m nightscout --format debug
 """
 
 import argparse
 import os
 import sys
 from datetime import datetime, date, timedelta
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 try:
@@ -25,9 +24,9 @@ try:
 except ImportError:
     load_dotenv = None
 
-from models import DayData
-from nightscout import get_day
-from formatters import FORMATTERS
+from nightscout.models import DayData
+from nightscout.api import get_day
+from nightscout.formatters import FORMATTERS
 
 
 # ---------------------------------------------------------------------------
@@ -82,9 +81,7 @@ def resolve_dates(args) -> list[str]:
 
 def main():
     if load_dotenv is not None:
-        env_path = Path(__file__).parent / ".env"
-        if env_path.exists():
-            load_dotenv(env_path)
+        load_dotenv()
 
     parser = argparse.ArgumentParser(
         description="Fetch therapy day data from Nightscout API",
