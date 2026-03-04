@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slidedeck</title>
+  <title>Nightflux</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
@@ -951,10 +951,10 @@
         <rect x="2" y="3" width="20" height="14" rx="2" />
         <path d="M8 21h8M12 17v4" />
       </svg>
-      Slidedeck
+      Nightflux
     </div>
     <div class="topbar-title" id="deckTitle">
-      <strong>Slidedeck</strong>
+      <strong>Nightflux</strong>
     </div>
     <div class="topbar-status connecting" id="connStatus">
       <span class="dot"></span>
@@ -1044,7 +1044,7 @@
     // ── State ──
     let slides = [];
     let currentSlideId = null;
-    let deckTitle = 'Slidedeck';
+    let deckTitle = 'Nightflux';
     let ws = null;
     let reconnectDelay = 500;
     const MAX_RECONNECT_DELAY = 10000;
@@ -1109,7 +1109,7 @@
         case 'deck:sync':
           slides = msg.data.slides || [];
           currentSlideId = msg.data.current_slide_id;
-          deckTitle = msg.data.title || 'Slidedeck';
+          deckTitle = msg.data.title || 'Nightflux';
           updateTitle();
           render();
           break;
@@ -1178,7 +1178,7 @@
     // ── Rendering ──
     function updateTitle() {
       document.getElementById('deckTitle').innerHTML = `<strong>${escapeHtml(deckTitle)}</strong>`;
-      document.title = deckTitle + ' — Slidedeck';
+      document.title = deckTitle + ' — Nightflux';
     }
 
     function render() {
